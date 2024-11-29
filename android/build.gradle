@@ -97,6 +97,5 @@ dependencies {
   implementation "com.facebook.react:react-native:+"
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
   implementation "com.google.android.gms:play-services-wallet:${getExtOrDefault("googlePlayServicesWallet")}"
-  implementation "androidx.appcompat:appcompat:${getExtOrDefault("appCompatVersion")}"
 }
 

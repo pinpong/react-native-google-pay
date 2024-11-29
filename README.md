@@ -11,49 +11,13 @@ Accept Payments with Google Pay for React Native apps.
 </div>
 
 ---
-
-## Versions
-
-| 1.x              | 2.x              |
-| ---------------- | -------------    |
-| Android support  | AndroidX support  |
-
-
 ## Getting started
 
 `$ yarn add react-native-google-pay`
 
-## Linking 
+### Android
 
-### >= 0.60
-
-Autolinking will just do the job.
-
-### < 0.60
-
-### Mostly automatic installation
-
-`$ react-native link react-native-google-pay`
-
-### Manual installation
-
-
-#### Android
-
-1. Open up `android/app/src/main/java/[...]/MainActivity.java`
-  - Add `import com.busfor.RNGooglePayPackage;` to the imports at the top of the file
-  - Add `new RNGooglePayPackage()` to the list returned by the `getPackages()` method
-2. Append the following lines to `android/settings.gradle`:
-  	```
-  	include ':react-native-google-pay'
-  	project(':react-native-google-pay').projectDir = new File(rootProject.projectDir, 	'../node_modules/react-native-google-pay/android')
-  	```
-3. Insert the following lines inside the dependencies block in `android/app/build.gradle`:
-  	```
-      implementation project(':react-native-google-pay')
-  	```
-
-### Enable Android Pay in your Manifest
+#### Enable Android Pay in your Manifest
 
 To enable Google Pay in your app, you need to add the following Google Pay API meta-data element to the `<application>` element of your project's AndroidManifest.xml file.
 
@@ -63,53 +27,86 @@ To enable Google Pay in your app, you need to add the following Google Pay API m
     android:value="true" />
 ```
 
+### IOS
+
+IOS is not supported
+
+
+
 ## Usage
-```javascript
-import { GooglePay } from 'react-native-google-pay';
+```typescript jsx
+import { GooglePay } from 'react-native-google-pay'
 
-const allowedCardNetworks = ['VISA', 'MASTERCARD'];
-const allowedCardAuthMethods = ['PAN_ONLY', 'CRYPTOGRAM_3DS'];
-
-const requestData = {
-  cardPaymentMethod: {
-    tokenizationSpecification: {
-      type: 'PAYMENT_GATEWAY',
-      // stripe (see Example):
-      gateway: 'stripe',
-      gatewayMerchantId: '',
-      stripe: {
-        publishableKey: 'pk_test_TYooMQauvdEDq54NiTphI7jx',
-        version: '2018-11-08',
+const isReadyToPayRequest: google.payments.api.IsReadyToPayRequest = {
+  ...GooglePay.BaseRequest,
+  allowedPaymentMethods: [
+    {
+      type: 'CARD',
+      parameters: {
+        allowedCardNetworks: ['AMEX', 'DISCOVER', 'JCB', 'MASTERCARD', 'VISA'],
+        allowedAuthMethods: ['CRYPTOGRAM_3DS', 'PAN_ONLY'],
       },
-      // other:
-      gateway: 'example',
-      gatewayMerchantId: 'exampleGatewayMerchantId',
+      tokenizationSpecification: {
+        type: 'PAYMENT_GATEWAY',
+        parameters: {
+          gateway: 'example',
+          gatewayMerchantId: 'exampleGatewayMerchantId',
+        },
+      },
     },
-    allowedCardNetworks,
-    allowedCardAuthMethods,
+  ],
+}
+
+const requestData: google.payments.api.PaymentDataRequest = {
+  ...GooglePay.BaseRequest,
+  allowedPaymentMethods: [
+    {
+      type: 'CARD',
+      parameters: {
+        allowedCardNetworks: ['AMEX', 'DISCOVER', 'JCB', 'MASTERCARD', 'VISA'],
+        allowedAuthMethods: ['CRYPTOGRAM_3DS', 'PAN_ONLY'],
+      },
+      tokenizationSpecification: {
+        type: 'PAYMENT_GATEWAY',
+        parameters: {
+          gateway: 'adyen',
+          gatewayMerchantId: 'exampleGatewayMerchantId',
+        },
+      },
+    },
+  ],
+  merchantInfo: {
+    merchantName: 'Example Merchant',
+    merchantId: 'Example Merchant',
   },
-  transaction: {
-    totalPrice: '10',
+  transactionInfo: {
+    totalPrice: '123',
     totalPriceStatus: 'FINAL',
-    currencyCode: 'USD',
+    currencyCode: 'RUB',
   },
-  merchantName: 'Example Merchant',
-};
+}
 
 // Set the environment before the payment request
-GooglePay.setEnvironment(GooglePay.ENVIRONMENT_TEST);
+GooglePay.setEnvironment(GooglePay.ENVIRONMENT_TEST).catch((error) => {
+    console.log(error.code, error.message)
+  },
+)
 
 // Check if Google Pay is available
-GooglePay.isReadyToPay(allowedCardNetworks, allowedCardAuthMethods)
+GooglePay.isReadyToPay(isReadyToPayRequest)
   .then((ready) => {
     if (ready) {
-      // Request payment token
+      // Request payment data
       GooglePay.requestPayment(requestData)
-        .then((token: string) => {
+        .then((data: google.payments.api.PaymentData) => {
           // Send a token to your payment gateway
+          console.log(data)
         })
-        .catch((error) => console.log(error.code, error.message));
+        .catch((error) => console.log(error.code, error.message))
     }
+  })
+  .catch((error) => {
+    console.log(error.code, error.message)
   })
 ```
 

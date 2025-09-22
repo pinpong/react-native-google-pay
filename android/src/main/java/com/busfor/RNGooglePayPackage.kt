@@ -1,0 +1,32 @@
+package com.busfor
+
+import com.facebook.react.BaseReactPackage
+import com.facebook.react.bridge.NativeModule
+import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.module.model.ReactModuleInfo
+import com.facebook.react.module.model.ReactModuleInfoProvider
+
+class RNGooglePayPackage : BaseReactPackage() {
+    override fun getModule(name: String, reactContext: ReactApplicationContext): NativeModule? {
+        return if (name == RNGooglePayModule.NAME) {
+            RNGooglePayModule(reactContext)
+        } else {
+            null
+        }
+    }
+
+    override fun getReactModuleInfoProvider(): ReactModuleInfoProvider {
+        return ReactModuleInfoProvider {
+            val moduleInfos: MutableMap<String, ReactModuleInfo> = HashMap()
+            moduleInfos[RNGooglePayModule.NAME] = ReactModuleInfo(
+                RNGooglePayModule.NAME,
+                RNGooglePayModule.NAME,
+                false,  // canOverrideExistingModule
+                false,  // needsEagerInit
+                false,  // isCxxModule
+                true // isTurboModule
+            )
+            moduleInfos
+        }
+    }
+}

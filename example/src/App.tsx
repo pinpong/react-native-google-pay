@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import {
   Alert,
   StyleSheet,
@@ -6,7 +6,7 @@ import {
   TouchableHighlight,
   View,
 } from 'react-native';
-import GooglePay from 'react-native-google-pay';
+import { GooglePay } from '../../src';
 
 const gatewayIsReadyToPayRequest: google.payments.api.IsReadyToPayRequest = {
   ...GooglePay.BaseRequest,
@@ -61,8 +61,8 @@ const stripeIsReadyToPayRequest: google.payments.api.IsReadyToPayRequest = {
       tokenizationSpecification: {
         type: 'PAYMENT_GATEWAY',
         parameters: {
-          gateway: 'stripe',
-          gatewayMerchantId: '',
+          'gateway': 'stripe',
+          'gatewayMerchantId': '',
           'stripe:publishableKey': 'pk_test_TYooMQauvdEDq54NiTphI7jx',
           'stripe:version': '2018-11-08',
         },
@@ -163,8 +163,8 @@ const stripeRequestData: google.payments.api.PaymentDataRequest = {
 
 export default function App() {
   useEffect(() => {
-    GooglePay.setEnvironment(GooglePay.ENVIRONMENT_TEST).catch(res =>
-      Alert.alert(`setEnvironment failed: ${res}`),
+    GooglePay.setEnvironment(GooglePay.EnvironmentType.ENVIRONMENT_TEST).catch(
+      (res) => Alert.alert(`setEnvironment failed: ${res}`)
     );
   }, []);
 
@@ -172,7 +172,7 @@ export default function App() {
     (result: google.payments.api.PaymentData) => {
       Alert.alert('Success', `${result}`);
     },
-    [],
+    []
   );
 
   const handleError = useCallback((error: any) => {
@@ -182,11 +182,11 @@ export default function App() {
   const payWithGooglePay = useCallback(
     (
       isReadyToPayRequestData: google.payments.api.IsReadyToPayRequest,
-      paymentDataRequestData: google.payments.api.PaymentDataRequest,
+      paymentDataRequestData: google.payments.api.PaymentDataRequest
     ) => {
       // Check if Google Pay is available
       GooglePay.isReadyToPay(isReadyToPayRequestData)
-        .then(ready => {
+        .then((ready) => {
           if (ready) {
             // Request payment token
             GooglePay.requestPayment(paymentDataRequestData)
@@ -198,7 +198,7 @@ export default function App() {
         })
         .catch(handleError);
     },
-    [handleError, handleSuccess],
+    [handleError, handleSuccess]
   );
 
   return (
@@ -208,21 +208,24 @@ export default function App() {
         style={styles.button}
         onPress={() =>
           payWithGooglePay(gatewayIsReadyToPayRequest, gatewayRequestData)
-        }>
+        }
+      >
         <Text style={styles.buttonText}>PAYMENT_GATEWAY</Text>
       </TouchableHighlight>
       <TouchableHighlight
         style={[styles.button, styles.direct]}
         onPress={() =>
           payWithGooglePay(directIsReadyToPayRequest, directRequestData)
-        }>
+        }
+      >
         <Text style={styles.buttonText}>DIRECT</Text>
       </TouchableHighlight>
       <TouchableHighlight
         style={[styles.button, styles.stripe]}
         onPress={() =>
           payWithGooglePay(stripeIsReadyToPayRequest, stripeRequestData)
-        }>
+        }
+      >
         <Text style={styles.buttonText}>Stripe</Text>
       </TouchableHighlight>
     </View>

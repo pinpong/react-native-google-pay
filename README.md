@@ -87,7 +87,7 @@ const requestData: google.payments.api.PaymentDataRequest = {
 }
 
 // Set the environment before the payment request
-GooglePay.setEnvironment(GooglePay.ENVIRONMENT_TEST).catch((error) => {
+GooglePay.setEnvironment(GooglePay.EnvironmentType.ENVIRONMENT_TEST).catch((error) => {
     console.log(error.code, error.message)
   },
 )

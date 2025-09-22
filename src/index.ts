@@ -1,12 +1,13 @@
+/// <reference types="googlepay" />
 import RNGooglePay from './NativeRNGooglePay';
 import { Platform } from 'react-native';
 
-export enum EnvironmentType {
+enum EnvironmentType {
   ENVIRONMENT_PRODUCTION = 1,
   ENVIRONMENT_TEST = 3,
 }
 
-export const BaseRequest = {
+const BaseRequest = {
   apiVersion: 2,
   apiVersionMinor: 0,
 };

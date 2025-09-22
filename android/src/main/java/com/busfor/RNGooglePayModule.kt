@@ -3,6 +3,7 @@ package com.busfor
 import android.app.Activity
 import android.content.Intent
 import com.facebook.react.bridge.ActivityEventListener
+import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.BaseActivityEventListener
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -16,6 +17,7 @@ import com.google.android.gms.wallet.PaymentData
 import com.google.android.gms.wallet.PaymentDataRequest
 import com.google.android.gms.wallet.PaymentsClient
 import com.google.android.gms.wallet.Wallet
+import org.json.JSONObject
 import java.util.Locale
 
 @ReactModule(name = RNGooglePayModule.NAME)
@@ -127,11 +129,21 @@ class RNGooglePayModule(reactContext: ReactApplicationContext) :
 
     private fun handlePaymentSuccess(paymentData: PaymentData?) {
         paymentData?.let { data ->
-            requestPaymentPromise?.resolve(data.toJson())
+            val json = paymentData.toJson()
+            val map = jsonToMap(JSONObject(json))
+            requestPaymentPromise?.resolve(Arguments.makeNativeMap(map))
         } ?: requestPaymentPromise?.reject(
             CommonStatusCodes.INTERNAL_ERROR.toString(), "Unexpected empty result data.", null
         )
     }
+
+    private fun jsonToMap(jsonObject: JSONObject): Map<String, Any?> =
+        jsonObject.keys().asSequence().associateWith { key ->
+            when (val value = jsonObject.get(key)) {
+                is JSONObject -> jsonToMap(value)
+                else -> value
+            }
+        }
 
     override fun getName(): String {
         return NAME

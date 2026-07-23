@@ -2,6 +2,7 @@ package com.busfor
 
 import android.app.Activity
 import android.content.Intent
+import android.content.IntentSender
 import com.facebook.react.bridge.ActivityEventListener
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.BaseActivityEventListener
@@ -11,6 +12,7 @@ import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.module.annotations.ReactModule
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.CommonStatusCodes
+import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.wallet.AutoResolveHelper
 import com.google.android.gms.wallet.IsReadyToPayRequest
 import com.google.android.gms.wallet.PaymentData
@@ -38,14 +40,12 @@ class RNGooglePayModule(reactContext: ReactApplicationContext) :
                 when (requestCode) {
                     LOAD_PAYMENT_DATA_REQUEST_CODE -> when (resultCode) {
                         Activity.RESULT_OK -> {
-                            data?.let { intent ->
-                                val paymentData = PaymentData.getFromIntent(intent)
-                                handlePaymentSuccess(paymentData)
-                            }
+                            val paymentData = data?.let { PaymentData.getFromIntent(it) }
+                            handlePaymentSuccess(paymentData)
                         }
 
-                        Activity.RESULT_CANCELED -> requestPaymentPromise?.reject(
-                            Activity.RESULT_CANCELED.toString(), "Payment has been canceled", null
+                        Activity.RESULT_CANCELED -> rejectRequestPaymentPromise(
+                            Activity.RESULT_CANCELED.toString(), "Payment has been canceled"
                         )
 
                         AutoResolveHelper.RESULT_ERROR -> {
@@ -56,10 +56,9 @@ class RNGooglePayModule(reactContext: ReactApplicationContext) :
                                 "loadPaymentData failed. Error code: %d",
                                 statusCode
                             )
-                            requestPaymentPromise?.reject(
+                            rejectRequestPaymentPromise(
                                 AutoResolveHelper.RESULT_ERROR.toString(),
-                                errorMessage,
-                                null
+                                errorMessage
                             )
                         }
 
@@ -108,33 +107,66 @@ class RNGooglePayModule(reactContext: ReactApplicationContext) :
     }
 
     override fun requestPayment(requestData: ReadableMap, promise: Promise) {
-        requestPaymentPromise = promise
-
         val request = PaymentDataRequest.fromJson(requestData.toString())
 
-        paymentsClient?.loadPaymentData(request)?.let { task ->
-            reactApplicationContext.currentActivity?.let { activity ->
-                AutoResolveHelper.resolveTask(
-                    task,
-                    activity,
-                    LOAD_PAYMENT_DATA_REQUEST_CODE
+        val activity = reactApplicationContext.currentActivity
+        val client = paymentsClient
+        if (activity == null || client == null) {
+            promise.reject(
+                CommonStatusCodes.ERROR.toString(),
+                "Payment client not initialized, setEnvironment() called?",
+                null
+            )
+            return
+        }
+
+        rejectRequestPaymentPromise(
+            CommonStatusCodes.CANCELED.toString(),
+            "Payment request was superseded by a new request."
+        )
+        requestPaymentPromise = promise
+
+        client.loadPaymentData(request).addOnCompleteListener { completedTask ->
+            try {
+                handlePaymentSuccess(completedTask.getResult(ApiException::class.java))
+            } catch (exception: ResolvableApiException) {
+                try {
+                    activity.startIntentSenderForResult(
+                        exception.resolution.intentSender,
+                        LOAD_PAYMENT_DATA_REQUEST_CODE,
+                        null,
+                        0,
+                        0,
+                        0
+                    )
+                } catch (sendException: IntentSender.SendIntentException) {
+                    rejectRequestPaymentPromise(
+                        CommonStatusCodes.ERROR.toString(),
+                        sendException.message
+                    )
+                }
+            } catch (exception: ApiException) {
+                rejectRequestPaymentPromise(
+                    exception.statusCode.toString(),
+                    exception.message
                 )
             }
-        } ?: promise.reject(
-            CommonStatusCodes.ERROR.toString(),
-            "Payment client not initialized, setEnvironment() called?",
-            null
-        )
+        }
     }
 
     private fun handlePaymentSuccess(paymentData: PaymentData?) {
         paymentData?.let { data ->
-            val json = paymentData.toJson()
-            val map = jsonToMap(JSONObject(json))
+            val map = jsonToMap(JSONObject(data.toJson()))
             requestPaymentPromise?.resolve(Arguments.makeNativeMap(map))
-        } ?: requestPaymentPromise?.reject(
-            CommonStatusCodes.INTERNAL_ERROR.toString(), "Unexpected empty result data.", null
+            requestPaymentPromise = null
+        } ?: rejectRequestPaymentPromise(
+            CommonStatusCodes.INTERNAL_ERROR.toString(), "Unexpected empty result data."
         )
+    }
+
+    private fun rejectRequestPaymentPromise(code: String, message: String?) {
+        requestPaymentPromise?.reject(code, message, null)
+        requestPaymentPromise = null
     }
 
     private fun jsonToMap(jsonObject: JSONObject): Map<String, Any?> =

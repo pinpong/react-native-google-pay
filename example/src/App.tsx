@@ -170,7 +170,7 @@ export default function App() {
 
   const handleSuccess = useCallback(
     (result: google.payments.api.PaymentData) => {
-      Alert.alert('Success', `${result}`);
+      Alert.alert('Success', `${JSON.stringify(result)}`);
     },
     []
   );
